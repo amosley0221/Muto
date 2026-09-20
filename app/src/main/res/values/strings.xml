@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Muto</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_lists">Lists</string>
+    <string name="nav_rules">Rules</string>
+    <string name="nav_log">Log</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Protection status -->
+    <string name="status_protected">Protected</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_starting">Starting…</string>
+    <string name="status_off">Protection is off</string>
+    <string name="status_failed">Protection stopped</string>
+
+    <string name="action_turn_on">Turn on protection</string>
+    <string name="action_turn_off">Turn off</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_add">Add</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_back">Back</string>
+    <string name="action_see_all">See all</string>
+    <string name="action_update_now">Update now</string>
+
+    <!-- Home -->
+    <string name="stat_blocked">Blocked</string>
+    <string name="stat_allowed">Allowed</string>
+    <string name="stat_share">Of queries</string>
+    <string name="home_rules_title">Rules loaded</string>
+    <string name="home_rules_subtitle">%1$s from lists · %2$s of your own</string>
+    <string name="home_recent_title">Recently blocked</string>
+    <string name="home_recent_empty">Nothing blocked yet. Open an app or a web page and it will show up here.</string>
+    <string name="home_limits_title">What this does and does not cover</string>
+    <string name="home_limits_body">Muto filters DNS, so it stops ads and trackers that live on their own domains — most in-app advertising, and most of what you would otherwise see in Chrome. It cannot remove the ads YouTube and Twitch stitch into the video itself, because those arrive from the same servers as the video. See the documentation for what does work there.</string>
+
+    <!-- Lists -->
+    <string name="lists_title">Block lists</string>
+    <string name="lists_add">Add a list</string>
+    <string name="lists_add_help">Muto reads hosts files, plain domain lists, and the whole-domain rules in Adblock Plus lists.</string>
+    <string name="lists_add_name">Name (optional)</string>
+    <string name="lists_add_url">List URL</string>
+    <string name="lists_added">List added</string>
+    <string name="lists_updating">Updating lists…</string>
+    <string name="lists_updated">Lists are up to date</string>
+    <string name="lists_status_never">Not downloaded yet</string>
+    <string name="lists_status_updated">%1$s entries · updated %2$s</string>
+    <string name="lists_status_error">Last update failed: %1$s</string>
+
+    <!-- Rules -->
+    <string name="rules_title">Your rules</string>
+    <string name="rules_allow">Allow</string>
+    <string name="rules_block">Block</string>
+    <string name="rules_domain_label">Domain</string>
+    <string name="rules_domain_help">Applies to the domain and everything under it.</string>
+    <string name="rules_allow_section">Always allowed</string>
+    <string name="rules_block_section">Always blocked</string>
+    <string name="rules_allow_empty">Nothing here yet. Add a domain when a list breaks a site you need.</string>
+    <string name="rules_block_empty">Nothing here yet. Add a domain to block it regardless of your lists.</string>
+    <string name="rule_allowed">%1$s will always be allowed</string>
+    <string name="rule_blocked">%1$s will always be blocked</string>
+
+    <!-- Log -->
+    <string name="log_title">Query log</string>
+    <string name="log_search">Search domains</string>
+    <string name="log_clear">Clear</string>
+    <string name="log_empty">No queries yet. Turn protection on and use your device for a moment.</string>
+    <string name="log_no_matches">Nothing matches that search.</string>
+    <string name="log_matched_rule">matched %1$s</string>
+    <string name="log_detail_blocked">Blocked by the rule %1$s.</string>
+    <string name="log_detail_allowed">Allowed. Matching rule: %1$s.</string>
+    <string name="log_detail_no_rule">none</string>
+    <string name="log_action_allow">Always allow this</string>
+    <string name="log_action_block">Always block this</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_group_filtering">Filtering</string>
+    <string name="settings_group_network">Network</string>
+    <string name="settings_group_updates">List updates</string>
+    <string name="settings_group_history">History</string>
+    <string name="settings_group_startup">Startup</string>
+
+    <string name="settings_block_mode">How blocked names are answered</string>
+    <string name="block_mode_nxdomain">Say the name does not exist</string>
+    <string name="block_mode_nxdomain_help">The default. Understood by every app, and the closest thing to the domain simply not being there.</string>
+    <string name="block_mode_null_ip">Answer with an unusable address</string>
+    <string name="block_mode_null_ip_help">Replies with 0.0.0.0. Some apps stop retrying sooner this way, but a few show a connection error instead of nothing.</string>
+    <string name="block_mode_refused">Refuse the query</string>
+    <string name="block_mode_refused_help">Makes it obvious in logs that a filter is in play. Useful for debugging, not for everyday use.</string>
+
+    <string name="settings_apps">Apps that bypass Muto</string>
+    <string name="settings_apps_none">None — every app is filtered</string>
+    <string name="settings_apps_count">%1$d app(s) excluded</string>
+
+    <string name="settings_resolver">Upstream resolver</string>
+    <string name="settings_ipv6">Filter IPv6 queries</string>
+    <string name="settings_ipv6_help">Leave on unless your network has trouble with IPv6. Turning it off lets AAAA lookups go unfiltered.</string>
+
+    <string name="settings_update_interval">Update lists every</string>
+    <string name="settings_update_interval_value">%1$d hours</string>
+    <string name="settings_update_unmetered">Only on Wi-Fi</string>
+    <string name="settings_update_unmetered_help">Block lists are several megabytes each.</string>
+
+    <string name="settings_keep_history">Keep a history on this device</string>
+    <string name="settings_keep_history_help">Off by default. The live log always works; this only controls whether it survives a restart.</string>
+    <string name="settings_retention">Keep history for</string>
+    <string name="settings_retention_value">%1$d hours</string>
+    <string name="settings_clear_history">Clear history now</string>
+    <string name="settings_clear_history_help">Removes everything recorded so far.</string>
+
+    <string name="settings_start_on_boot">Turn on after restarting</string>
+    <string name="settings_start_on_boot_help">Only works if you have already granted VPN permission.</string>
+
+    <string name="settings_about">Muto filters DNS locally on this device. No query ever leaves your phone except to the resolver you chose, and Muto sends nothing anywhere else.</string>
+
+    <!-- Apps -->
+    <string name="apps_title">App bypass</string>
+    <string name="apps_help">An app switched on here is excluded from the tunnel entirely: its traffic is neither filtered nor visible to Muto. Use it for apps that refuse to run while a VPN is active.</string>
+
+    <!-- Notification -->
+    <string name="notification_channel_status">Protection status</string>
+    <string name="notification_channel_status_description">The ongoing notification Android requires while Muto is filtering.</string>
+    <string name="notification_active">Muto is filtering</string>
+    <string name="notification_paused">Muto is paused</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_state_on">Filtering</string>
+    <string name="tile_state_paused">Paused</string>
+    <string name="tile_state_off">Off</string>
+
+    <!-- Errors -->
+    <string name="error_vpn_permission">Muto needs VPN permission to filter DNS. Nothing is sent anywhere — the permission is how Android lets an app see its own device\'s DNS.</string>
+
+    <plurals name="notification_blocked_count">
+        <item quantity="one">%1$d request blocked</item>
+        <item quantity="other">%1$d requests blocked</item>
+    </plurals>
+
+    <plurals name="lists_update_failed">
+        <item quantity="one">%1$d list could not be updated</item>
+        <item quantity="other">%1$d lists could not be updated</item>
+    </plurals>
+</resources>

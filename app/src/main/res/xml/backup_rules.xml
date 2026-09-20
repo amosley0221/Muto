@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!--
+      Settings, rules and list subscriptions are worth restoring onto a new device. The compiled
+      block lists are not: they are a cache that is stale by the time a restore happens, and they
+      are the largest thing Muto stores.
+    -->
+    <include domain="database" path="muto.db" />
+    <include domain="sharedpref" path="." />
+    <exclude domain="file" path="lists" />
+</full-backup-content>

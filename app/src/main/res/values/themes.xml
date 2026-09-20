@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Compose draws everything, so this only needs to cover the window before the first frame.
+      NoActionBar keeps the system from drawing a title bar above the Compose content.
+    -->
+    <style name="Theme.Muto" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@android:color/background_light</item>
+    </style>
+</resources>
