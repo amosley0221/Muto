@@ -13,6 +13,7 @@ import java.io.IOException
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.nio.channels.ClosedSelectorException
 import java.nio.channels.DatagramChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
@@ -87,9 +88,10 @@ class DnsPacketPump(
         // Interrupting the reader is not enough: a blocking read on the TUN descriptor only
         // returns once the descriptor itself is closed, which the service does after this.
         readerThread?.interrupt()
+        // Wake the selector rather than close it from here: closing it under a blocked select()
+        // raises ClosedSelectorException on that thread. It closes itself on the way out.
         selector.wakeup()
         writerThread?.interrupt()
-        runCatching { selector.close() }
         drainRegistrations { it.channel.closeQuietly() }
     }
 
@@ -207,8 +209,11 @@ class DnsPacketPump(
             }
         } catch (e: IOException) {
             if (running.get()) fail(e)
+        } catch (e: ClosedSelectorException) {
+            // Only reachable if something closed the selector out from under us; stopping anyway.
         } finally {
             closeAllKeys()
+            runCatching { selector.close() }
         }
     }
 

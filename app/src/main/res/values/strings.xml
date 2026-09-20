@@ -127,6 +127,7 @@
     <!-- Notification -->
     <string name="notification_channel_status">Protection status</string>
     <string name="notification_channel_status_description">The ongoing notification Android requires while Muto is filtering.</string>
+    <string name="notification_starting">Muto is starting…</string>
     <string name="notification_active">Muto is filtering</string>
     <string name="notification_paused">Muto is paused</string>
 

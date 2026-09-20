@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -61,6 +62,9 @@ class FilterCoordinator(
             blocklists.observeSubscriptions().map { subs -> subs.filter { it.enabled }.map { it.id to it.lastUpdatedAt } },
             settingsStore.settings.map { it.blockMode }.distinctUntilChanged(),
         ) { _, _, _ -> Unit }
+            // Conflated: adding three rules in a row should compile the set once at the end, not
+            // three times. Compiling is hundreds of thousands of hashes to merge and sort.
+            .conflate()
             .onEach { reload() }
             .launchIn(scope)
     }

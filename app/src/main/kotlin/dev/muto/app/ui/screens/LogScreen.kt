@@ -107,7 +107,7 @@ fun LogScreen(viewModel: MutoViewModel) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(visible, key = { "${it.timestamp}-${it.host}" }) { entry ->
+                    items(visible, key = { it.id }) { entry ->
                         LogRow(entry = entry, onClick = { selected = entry })
                     }
                 }

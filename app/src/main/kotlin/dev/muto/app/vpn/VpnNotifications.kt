@@ -38,7 +38,11 @@ class VpnNotifications(private val context: Context) {
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(
                 context.getString(
-                    if (state == ProtectionState.PAUSED) R.string.notification_paused else R.string.notification_active,
+                    when (state) {
+                        ProtectionState.PAUSED -> R.string.notification_paused
+                        ProtectionState.STARTING -> R.string.notification_starting
+                        else -> R.string.notification_active
+                    },
                 ),
             )
             .setContentText(context.resources.getQuantityString(

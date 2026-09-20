@@ -83,12 +83,12 @@ object BlocklistParser {
      * can express, so those are dropped.
      */
     private fun parseAdblockRule(rule: String, allow: Boolean): Entry? {
-        var body = rule
-        if (body.startsWith("||")) body = body.substring(2) else if (allow) {
-            // An exception written as "@@example.com" without anchors still reads as a domain.
-            if (body.startsWith("||")) body = body.substring(2)
-        } else {
-            return null
+        // "||" is the domain anchor. A block rule without it is not a whole-domain rule and is
+        // skipped; an exception written as "@@example.com" is still readable as a domain.
+        var body = when {
+            rule.startsWith("||") -> rule.substring(2)
+            allow -> rule
+            else -> return null
         }
 
         val optionsAt = body.indexOf('$')

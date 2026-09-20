@@ -7,6 +7,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.core.content.ContextCompat
 import dev.muto.app.MainActivity
 import dev.muto.app.MutoApplication
 import dev.muto.app.R
@@ -25,6 +26,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The service that actually filters.
@@ -48,6 +51,9 @@ class MutoVpnService : VpnService() {
     /** The settings the current tunnel was built from, to spot the ones that need a rebuild. */
     private var activeSettings: Settings? = null
 
+    /** Serialises start and restart, which can otherwise be triggered concurrently. */
+    private val tunnelLock = Mutex()
+
     override fun onCreate() {
         super.onCreate()
         container = application as MutoApplication
@@ -55,6 +61,16 @@ class MutoVpnService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Android gives a service started with startForegroundService about five seconds to put
+        // up a notification, and bringing the tunnel up can take longer than that on a cold start
+        // with a large rule set. So the notification goes up first, before any work.
+        if (intent?.action == null || intent.action == ACTION_START) {
+            startForeground(
+                VpnNotifications.NOTIFICATION_ID,
+                notifications!!.build(ProtectionState.STARTING, 0),
+            )
+        }
+
         when (intent?.action) {
             ACTION_STOP -> {
                 scope.launch { container.settingsStore.setProtectionRequested(false) }
@@ -70,14 +86,25 @@ class MutoVpnService : VpnService() {
                 setPaused(false)
                 return START_STICKY
             }
-            else -> scope.launch { startTunnel() }
+            else -> scope.launch {
+                // A null intent means Android restarted us after reclaiming memory. Only come
+                // back up if the user actually still wants protection on.
+                if (intent == null && !container.settingsStore.currentSettings().protectionRequested) {
+                    stopForegroundCompat()
+                    stopSelf()
+                    return@launch
+                }
+                startTunnel()
+            }
         }
         // START_STICKY so Android brings the service back if it reclaims memory; the tunnel is
         // re-established from the persisted "protection requested" flag.
         return START_STICKY
     }
 
-    private suspend fun startTunnel() {
+    private suspend fun startTunnel() = tunnelLock.withLock { startTunnelLocked() }
+
+    private suspend fun startTunnelLocked() {
         if (tunnel != null) return
         publish(VpnStatus(ProtectionState.STARTING))
 
@@ -225,7 +252,9 @@ class MutoVpnService : VpnService() {
                 }
                 if (active.requiresTunnelRestart(settings)) {
                     Log.i(TAG, "Tunnel configuration changed; rebuilding")
-                    restart()
+                    // On its own scope: rebuilding cancels this collector, so calling it inline
+                    // would cancel the coroutine partway through and leave the tunnel down.
+                    scope.launch { restart() }
                 } else {
                     activeSettings = settings
                 }
@@ -233,9 +262,9 @@ class MutoVpnService : VpnService() {
             .launchIn(scope)
     }
 
-    private suspend fun restart() {
+    private suspend fun restart() = tunnelLock.withLock {
         stopTunnel(ProtectionState.STARTING)
-        startTunnel()
+        startTunnelLocked()
     }
 
     private fun setPaused(paused: Boolean) {
@@ -311,7 +340,12 @@ class MutoVpnService : VpnService() {
         val status: StateFlow<VpnStatus> = _status.asStateFlow()
 
         fun start(context: Context) {
-            context.startService(Intent(context, MutoVpnService::class.java).setAction(ACTION_START))
+            // startForegroundService, because the tile and the boot receiver both send this from
+            // the background, where a plain startService is refused.
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, MutoVpnService::class.java).setAction(ACTION_START),
+            )
         }
 
         fun stop(context: Context) {

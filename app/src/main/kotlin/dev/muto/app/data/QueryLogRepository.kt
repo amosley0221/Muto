@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Holds the recent query history.
@@ -36,8 +37,15 @@ class QueryLogRepository(
 
     private val pendingWrites = ArrayList<QueryLogEntity>(BATCH_SIZE)
     private val writeLock = Mutex()
+    private val sequence = AtomicLong()
 
     data class Entry(
+        /**
+         * Process-local sequence number. The timestamp is not unique - a host is looked up for A
+         * and AAAA in the same millisecond as a matter of course - and the log needs a stable
+         * distinct key per row.
+         */
+        val id: Long,
         val host: String,
         val blocked: Boolean,
         val reason: String,
@@ -47,6 +55,7 @@ class QueryLogRepository(
 
     fun record(record: DnsPacketPump.QueryRecord) {
         val entry = Entry(
+            id = sequence.incrementAndGet(),
             host = record.host,
             blocked = record.verdict.blocked,
             reason = record.verdict.reason.name,

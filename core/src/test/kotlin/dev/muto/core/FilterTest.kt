@@ -296,3 +296,49 @@ class FilterEngineTest {
         assertEquals(BlockMode.NULL_IP, engine.blockMode())
     }
 }
+
+class BlocklistParserEdgeCaseTest {
+
+    @Test
+    fun `reads an exception rule written without the domain anchor`() {
+        val result = BlocklistParser.parse("@@example.com\n")
+        assertEquals(listOf("example.com"), result.allowed)
+        assertTrue(result.blocked.isEmpty())
+    }
+
+    @Test
+    fun `treats every sinkhole address as a block`() {
+        val result = BlocklistParser.parse(
+            """
+            0.0.0.0 a.example.com
+            127.0.0.1 b.example.com
+            :: c.example.com
+            ::1 d.example.com
+            """.trimIndent(),
+        )
+        assertEquals(
+            listOf("a.example.com", "b.example.com", "c.example.com", "d.example.com"),
+            result.blocked,
+        )
+    }
+
+    @Test
+    fun `a block rule without the domain anchor is skipped`() {
+        // "example.com^" on its own is ambiguous as an ABP rule; only "||example.com^" anchors it.
+        assertTrue(BlocklistParser.parse("|example.com^\n").blocked.isEmpty())
+    }
+
+    @Test
+    fun `blank lines and comments are not counted as read`() {
+        val result = BlocklistParser.parse("\n# header\n\n0.0.0.0 ads.example.com\n\n")
+        assertEquals(1, result.linesRead)
+        assertEquals(0, result.linesSkipped)
+        assertEquals(listOf("ads.example.com"), result.blocked)
+    }
+
+    @Test
+    fun `handles a list with CRLF line endings`() {
+        val result = BlocklistParser.parse("0.0.0.0 a.example.com\r\n0.0.0.0 b.example.com\r\n")
+        assertEquals(listOf("a.example.com", "b.example.com"), result.blocked)
+    }
+}
