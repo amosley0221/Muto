@@ -13,3 +13,8 @@ local.properties
 *.aab
 *.keystore
 !debug.keystore
+
+# The release signing key. Committing it would let anyone sign an APK that Android
+# accepts as an update to Muto.
+*.jks
+muto-release.jks

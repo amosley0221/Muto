@@ -1,0 +1,66 @@
+name: Build
+
+# Runs on every push and pull request. This is the job that actually compiles the Android module,
+# so it is the first thing to look at when something is wrong.
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install the SDK packages the build needs
+        run: |
+          # The runner image ships an Android SDK with licences already accepted, but not
+          # necessarily the exact platform this project compiles against.
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Test the filtering engine
+        run: ./gradlew :core:test
+
+      - name: Build the debug APK
+        run: ./gradlew :app:assembleDebug
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug
+        continue-on-error: true
+
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: muto-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            core/build/reports/tests/**
+            app/build/reports/**
+          if-no-files-found: ignore
+          retention-days: 14

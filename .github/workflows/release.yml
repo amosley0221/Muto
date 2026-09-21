@@ -1,0 +1,171 @@
+name: Release
+
+# Publishes a signed APK to the releases page. Triggered by pushing a version tag:
+#
+#     git tag v0.2.0 && git push origin v0.2.0
+#
+# The signing secrets are what make an installed copy upgradeable in place; see
+# docs/RELEASING.md for how to create them once.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and publish (e.g. v0.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          # The release notes are built by diffing against the previous tag, which needs history.
+          fetch-depth: 0
+
+      - name: Work out the version
+        id: version
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH. The version code is derived from"
+            echo "::error::those three numbers, and Android rejects an update whose code did not rise."
+            exit 1
+          fi
+          MAJOR="${VERSION%%.*}"; REST="${VERSION#*.}"
+          MINOR="${REST%%.*}"; PATCH="${REST#*.}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install the SDK packages the build needs
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Restore the signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MUTO_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::error::MUTO_KEYSTORE_BASE64 is not set. Without it the APK would be unsigned,"
+            echo "::error::and an unsigned build cannot install or update on a device."
+            echo "::error::Run tools/setup-signing.sh once to create the key and the secrets."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/muto-release.jks"
+          echo "path=$RUNNER_TEMP/muto-release.jks" >> "$GITHUB_OUTPUT"
+
+      - name: Test the filtering engine
+        run: ./gradlew :core:test
+
+      - name: Build the signed release APK
+        env:
+          MUTO_VERSION_NAME: ${{ steps.version.outputs.version }}
+          MUTO_VERSION_CODE: ${{ steps.version.outputs.code }}
+          MUTO_KEYSTORE_FILE: ${{ steps.signing.outputs.path }}
+          MUTO_KEYSTORE_PASSWORD: ${{ secrets.MUTO_KEYSTORE_PASSWORD }}
+          MUTO_KEY_ALIAS: ${{ secrets.MUTO_KEY_ALIAS }}
+          MUTO_KEY_PASSWORD: ${{ secrets.MUTO_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: Name the APK after its version
+        id: apk
+        run: |
+          set -euo pipefail
+          SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          DEST="muto-${{ steps.version.outputs.version }}.apk"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm the APK is signed with the expected key
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          # An unsigned APK installs on nothing, and a wrongly signed one cannot update an
+          # existing copy. Both are worth catching before the release is published, not after.
+          "$APKSIGNER" verify --print-certs "${{ steps.apk.outputs.path }}"
+          echo "SHA-256 of the signing certificate, which must stay the same across releases:"
+          "$APKSIGNER" verify --print-certs "${{ steps.apk.outputs.path }}" | grep -i "SHA-256 digest" || true
+
+      - name: Write the release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES=release-notes.md
+
+          # A hand-written section in CHANGELOG.md wins, because it can say what actually changed
+          # for someone using the app. Commit subjects are the fallback, not the first choice.
+          if [ -f CHANGELOG.md ] && awk -v v="## $VERSION" '$0 ~ "^"v { found=1 } END { exit !found }' CHANGELOG.md; then
+            awk -v v="## $VERSION" '
+              $0 ~ "^"v { printing=1; next }
+              printing && /^## / { exit }
+              printing { print }
+            ' CHANGELOG.md > "$NOTES"
+          else
+            PREVIOUS=$(git describe --tags --abbrev=0 "${{ steps.version.outputs.tag }}^" 2>/dev/null || echo "")
+            {
+              echo "### Changes"
+              echo
+              if [ -n "$PREVIOUS" ]; then
+                git log --no-merges --pretty="- %s" "$PREVIOUS..${{ steps.version.outputs.tag }}"
+              else
+                git log --no-merges --pretty="- %s"
+              fi
+            } > "$NOTES"
+          fi
+
+          cat >> "$NOTES" <<'FOOTER'
+
+          ---
+
+          ### Installing
+
+          Download `muto-<version>.apk` below and open it. Android will ask you to allow
+          installing from this source the first time.
+
+          **Updating:** install the new APK straight over the old one. Your rules, lists and
+          settings are kept, and there is no need to uninstall first — every release is signed
+          with the same key, which is what allows the upgrade.
+
+          If Android says *"App not installed"*, the copy on your device was signed with a
+          different key. That happens if you previously installed a debug build from CI, or an
+          APK built on a different machine. Uninstall that copy once, install this one, and
+          future updates will apply in place.
+          FOOTER
+          echo "path=$NOTES" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Re-running a release should replace its asset rather than fail.
+            gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --clobber
+            gh release edit "$TAG" --notes-file "${{ steps.notes.outputs.path }}"
+          else
+            gh release create "$TAG" "${{ steps.apk.outputs.path }}" \
+              --title "Muto ${{ steps.version.outputs.version }}" \
+              --notes-file "${{ steps.notes.outputs.path }}"
+          fi

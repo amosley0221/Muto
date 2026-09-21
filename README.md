@@ -71,6 +71,20 @@ not used to route traffic anywhere.
 
 ---
 
+## Installing
+
+Grab the latest `muto-<version>.apk` from the [releases page](../../releases) and open it on the
+phone. Android will ask you to allow installing from this source the first time.
+
+**Updating:** install the newer APK straight over the old one. Rules, lists, history and settings
+are all kept, and there is no need to uninstall — every release is signed with the same key, which
+is what lets Android treat it as an update rather than a different app.
+
+If an update is refused with *"App not installed"*, the copy on the device was signed with a
+different key — most often a debug APK from CI, which is deliberately a separate app. Uninstall
+that one, install a release, and updates apply in place from then on.
+[docs/RELEASING.md](docs/RELEASING.md) covers this in full.
+
 ## Building
 
 Requires Android Studio (Ladybug or newer) or a command-line Android SDK, and JDK 17+.
@@ -99,6 +113,15 @@ they can be tested on the JVM in a second, without an emulator.
 ./gradlew :core:test          # runs anywhere, no Android SDK needed
 ./gradlew :app:assembleDebug  # needs the SDK
 ```
+
+## Continuous integration
+
+- **Build** runs on every push: `core` tests, the debug APK, and lint. The APK is attached to the
+  run as an artifact.
+- **Release** runs when a `v*` tag is pushed: builds and signs the APK, verifies the signature,
+  and publishes it to the releases page with notes.
+
+Releasing needs a signing key set up once — see [docs/RELEASING.md](docs/RELEASING.md).
 
 ---
 
