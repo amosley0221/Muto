@@ -1,5 +1,11 @@
-// Plugin versions are pinned in gradle/libs.versions.toml and applied per module, so this file
-// stays empty. Keeping the Android plugin out of the root script means :core - which is plain
-// Kotlin - can be configured and tested without the Android SDK present:
+// The Kotlin plugins are declared here, without being applied, so both modules share one loaded
+// copy - Gradle warns that loading it separately per subproject is unsupported.
 //
-//     gradle :core:test --configure-on-demand
+// The Android plugin is deliberately NOT here. Keeping it out means :core, which is plain Kotlin,
+// can be configured and tested without the Android SDK installed:
+//
+//     ./gradlew :core:test --configure-on-demand
+plugins {
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.android) apply false
+}

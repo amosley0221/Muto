@@ -1,5 +1,6 @@
 package dev.muto.app.ui.screens
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -109,14 +111,14 @@ fun RulesScreen(viewModel: MutoViewModel) {
             }
 
             ruleSection(
-                title = stringResource(R.string.rules_allow_section),
-                empty = stringResource(R.string.rules_allow_empty),
+                title = R.string.rules_allow_section,
+                empty = R.string.rules_allow_empty,
                 rules = allowRules,
                 onRemove = viewModel::removeRule,
             )
             ruleSection(
-                title = stringResource(R.string.rules_block_section),
-                empty = stringResource(R.string.rules_block_empty),
+                title = R.string.rules_block_section,
+                empty = R.string.rules_block_empty,
                 rules = blockRules,
                 onRemove = viewModel::removeRule,
             )
@@ -124,15 +126,21 @@ fun RulesScreen(viewModel: MutoViewModel) {
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.ruleSection(
-    title: String,
-    empty: String,
+/**
+ * A titled group of rules.
+ *
+ * Titles are passed as resource ids rather than resolved strings: this runs in LazyListScope,
+ * which is not a composable scope, so stringResource can only be called inside the item bodies.
+ */
+private fun LazyListScope.ruleSection(
+    @StringRes title: Int,
+    @StringRes empty: Int,
     rules: List<RuleEntity>,
     onRemove: (Long) -> Unit,
 ) {
     item {
         Text(
-            title,
+            stringResource(title),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(top = 8.dp),
         )
@@ -140,7 +148,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.ruleSection(
     if (rules.isEmpty()) {
         item {
             Text(
-                empty,
+                stringResource(empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
