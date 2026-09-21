@@ -57,7 +57,26 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Install the SDK packages the build needs
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          echo "SDK root: ${SDK_ROOT:-<unset>}"
+
+          # sdkmanager is not on PATH on the hosted runners; it lives under cmdline-tools, and
+          # the directory under it is versioned, so it has to be looked up rather than assumed.
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ] && [ -n "$SDK_ROOT" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)"
+          fi
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::warning::sdkmanager not found; relying on the Android plugin to fetch what it needs."
+            exit 0
+          fi
+
+          echo "Using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Restore the signing key
         id: signing
