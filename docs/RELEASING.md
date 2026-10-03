@@ -35,10 +35,21 @@ anyone, ever. There is no recovery path.
 
 ## Cutting a release
 
+Either bump the version file:
+
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+echo 0.2.0 > VERSION
+git commit -am "Release 0.2.0" && git push
 ```
+
+or push a tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Both produce the same thing. The VERSION file route exists because not every environment is
+allowed to push tags; when a release is cut that way the workflow creates the tag itself.
 
 The `Release` workflow then:
 
