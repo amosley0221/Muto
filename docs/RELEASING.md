@@ -35,21 +35,19 @@ anyone, ever. There is no recovery path.
 
 ## Cutting a release
 
-Either bump the version file:
+Bump the version file and push:
 
 ```bash
-echo 0.2.0 > VERSION
+sed -i 's/^0\..*/0.2.0/' VERSION
 git commit -am "Release 0.2.0" && git push
 ```
 
-or push a tag:
+The workflow creates the `v0.2.0` tag itself, builds and signs the APK, and publishes it.
 
-```bash
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-Both produce the same thing. The VERSION file route exists because not every environment is
-allowed to push tags; when a release is cut that way the workflow creates the tag itself.
+There is no tag trigger, on purpose. GitHub treats `branches`, `tags` and `paths` under `push`
+as filters that must all hold, so a workflow listing both `tags` and `paths` runs for neither a
+branch push nor a tag push. One trigger that works is better than two that cancel out. Pushing a
+tag by hand is harmless, it just does not start anything.
 
 The `Release` workflow then:
 

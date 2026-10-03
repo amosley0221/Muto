@@ -2,22 +2,21 @@ name: Release
 
 # Publishes a signed APK to the releases page.
 #
-# Two ways to cut a release, both equivalent:
-#   - bump the VERSION file and push         (the usual way)
-#   - push a tag: git tag v0.2.0 && git push origin v0.2.0
+# To cut a release: bump the VERSION file and push. The workflow creates the tag itself.
 #
-# The VERSION file exists because not every environment can push tags; the workflow creates the
-# tag itself in that case, so the two routes produce the same thing.
+# There is deliberately no tag trigger. Under `push`, listing `tags` excludes branch pushes, and
+# a `paths` filter then has to hold for the tag push as well - which it never does, since a tag
+# push changes no files. One trigger that works beats two that interfere.
 #
 # Signing secrets are what make an installed copy upgradeable in place; see docs/RELEASING.md.
 on:
   push:
-    tags: ["v*"]
+    branches: ["**"]
     paths: ["VERSION"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build and publish (e.g. v0.2.0)"
+        description: "Version to (re)build and publish, e.g. v0.2.0. Defaults to the VERSION file."
         required: false
 
 permissions:
@@ -49,7 +48,7 @@ jobs:
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${{ github.ref_name }}"
           else
-            TAG="v$(tr -d ' \t\n\r' < VERSION)"
+            TAG="v$(grep -vE '^[[:space:]]*(#|$)' VERSION | head -1 | tr -d ' \t\n\r')"
           fi
           VERSION="${TAG#v}"
 
