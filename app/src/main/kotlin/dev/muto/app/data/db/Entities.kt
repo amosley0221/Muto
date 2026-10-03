@@ -52,3 +52,25 @@ data class QueryLogEntity(
     val rule: String?,
     val timestamp: Long,
 )
+
+/**
+ * A saved WireGuard configuration.
+ *
+ * The config is kept as the text the user imported rather than as parsed fields: it round-trips
+ * exactly, including any keys the parser does not model, and re-parsing on use means a config
+ * that stopped being valid fails loudly at connect time rather than silently losing a line on
+ * import.
+ *
+ * It contains a private key, so it lives in the app-private database and is excluded from backup.
+ */
+@Entity(tableName = "tunnels", indices = [Index(value = ["name"], unique = true)])
+data class TunnelEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** What the user calls it. Also the interface name, so it has to satisfy WireGuard's rules. */
+    val name: String,
+    /** The wg-quick format text, verbatim as imported. */
+    val config: String,
+    /** Shown in the list so the one you actually use is easy to find. */
+    val lastConnectedAt: Long? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+)

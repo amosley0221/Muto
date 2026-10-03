@@ -40,7 +40,7 @@ import dev.muto.core.filter.UpstreamResolvers
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: MutoViewModel, onOpenApps: () -> Unit) {
+fun SettingsScreen(viewModel: MutoViewModel, onOpenApps: () -> Unit, onOpenTunnels: () -> Unit) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var showBlockMode by remember { mutableStateOf(false) }
     var showResolver by remember { mutableStateOf(false) }
@@ -77,6 +77,12 @@ fun SettingsScreen(viewModel: MutoViewModel, onOpenApps: () -> Unit) {
 
             item {
                 SettingsGroup(stringResource(R.string.settings_group_network)) {
+                    ClickableRow(
+                        title = stringResource(R.string.tunnel_title),
+                        subtitle = stringResource(R.string.tunnel_manage),
+                        onClick = onOpenTunnels,
+                    )
+                    HorizontalDivider()
                     ClickableRow(
                         title = stringResource(R.string.settings_resolver),
                         subtitle = UpstreamResolvers.byId(settings.upstreamResolverId)?.title

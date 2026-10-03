@@ -68,6 +68,10 @@ not used to route traffic anywhere.
 - **Quick Settings tile**, start-after-reboot, and scheduled list updates that defer to Wi-Fi.
 - **Choice of upstream resolver** — follow the network, or pin Cloudflare, Quad9 or Google.
 - **Choice of block response** — NXDOMAIN (default), a null IP, or REFUSED.
+- **VPN tunnel mode** — import a WireGuard config and route the device through your own server or
+  a provider's. Exclusive with filtering, because Android allows one VPN at a time.
+  [docs/VPN.md](docs/VPN.md) covers choosing an exit and what geo-restriction a tunnel can and
+  cannot defeat.
 
 ---
 

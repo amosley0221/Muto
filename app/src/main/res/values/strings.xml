@@ -124,6 +124,33 @@
     <string name="apps_title">App bypass</string>
     <string name="apps_help">An app switched on here is excluded from the tunnel entirely: its traffic is neither filtered nor visible to Muto. Use it for apps that refuse to run while a VPN is active.</string>
 
+    <!-- Mode -->
+    <string name="mode_filter">Block ads</string>
+    <string name="mode_tunnel">VPN tunnel</string>
+    <string name="mode_help">Android allows one VPN at a time, so Muto does one of these at once. Switching turns the other off.</string>
+
+    <!-- Tunnel -->
+    <string name="tunnel_title">VPN servers</string>
+    <string name="tunnel_manage">Manage servers</string>
+    <string name="tunnel_add">Add a server</string>
+    <string name="tunnel_add_help">Paste a WireGuard configuration. Providers like Mullvad, Proton and IVPN give you one as a .conf file; so does a server you set up yourself.</string>
+    <string name="tunnel_add_name">Name (optional)</string>
+    <string name="tunnel_add_config">WireGuard config</string>
+    <string name="tunnel_imported">Added %1$s</string>
+    <string name="tunnel_failed">The tunnel could not be started</string>
+    <string name="tunnel_none_configured">Add a WireGuard server first — there is nothing to connect to yet.</string>
+    <string name="tunnel_empty">No servers yet. Add a WireGuard config to use Muto as a VPN.</string>
+    <string name="tunnel_selected">In use</string>
+    <string name="tunnel_state_connected">Connected</string>
+    <string name="tunnel_state_connecting">Connecting…</string>
+    <string name="tunnel_state_disconnected">Not connected</string>
+    <string name="tunnel_state_failed">Connection failed</string>
+    <string name="tunnel_endpoint">via %1$s</string>
+    <string name="tunnel_transfer">%1$s received · %2$s sent</string>
+    <string name="tunnel_no_server">No server chosen</string>
+    <string name="tunnel_filtering_note">While the tunnel is up, ad blocking comes from whatever resolver the config\'s DNS line points at — Muto\'s own lists are not applied. See the docs for why.</string>
+    <string name="tunnel_geo_note">A VPN changes which country your IP says you are in. It does not change what your phone\'s GPS reports, which is what strict services such as YouTube TV actually check.</string>
+
     <!-- Notification -->
     <string name="notification_channel_status">Protection status</string>
     <string name="notification_channel_status_description">The ongoing notification Android requires while Muto is filtering.</string>

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,6 +18,20 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("muto_settings")
 
+/**
+ * What Muto does while protection is on.
+ *
+ * Android allows one VPN at a time, so these are exclusive rather than additive: the DNS filter
+ * and the WireGuard tunnel both need the VPN slot and cannot both hold it.
+ */
+enum class ProtectionMode {
+    /** Filter DNS locally. Nothing leaves the device except the queries themselves. */
+    FILTER,
+
+    /** Route everything through a WireGuard server. Filtering is handled by the config's DNS. */
+    TUNNEL,
+}
+
 /** Everything the user can change, and the one thing they cannot: what Muto remembers it was doing. */
 data class Settings(
     /**
@@ -24,6 +39,9 @@ data class Settings(
      * the tunnel can be down because Android killed it, and this is what tells us to bring it back.
      */
     val protectionRequested: Boolean = false,
+    val protectionMode: ProtectionMode = ProtectionMode.FILTER,
+    /** The tunnel to bring up in TUNNEL mode. Null means "the most recently used one". */
+    val activeTunnelId: Long? = null,
     val blockMode: BlockMode = BlockMode.NXDOMAIN,
     val upstreamResolverId: String = UpstreamResolvers.SYSTEM_ID,
     val customUpstreamServers: List<String> = emptyList(),
@@ -51,6 +69,12 @@ class SettingsStore(private val context: Context) {
     suspend fun setProtectionRequested(value: Boolean) = put { it[PROTECTION_REQUESTED] = value }
 
     suspend fun setBlockMode(value: BlockMode) = put { it[BLOCK_MODE] = value.name }
+
+    suspend fun setProtectionMode(value: ProtectionMode) = put { it[PROTECTION_MODE] = value.name }
+
+    suspend fun setActiveTunnelId(id: Long?) = put { prefs ->
+        if (id == null) prefs.remove(ACTIVE_TUNNEL) else prefs[ACTIVE_TUNNEL] = id
+    }
 
     suspend fun setUpstreamResolver(id: String) = put { it[UPSTREAM_RESOLVER] = id }
 
@@ -82,6 +106,10 @@ class SettingsStore(private val context: Context) {
 
     private fun Preferences.toSettings() = Settings(
         protectionRequested = this[PROTECTION_REQUESTED] ?: false,
+        protectionMode = this[PROTECTION_MODE]?.let { name ->
+            ProtectionMode.entries.firstOrNull { it.name == name }
+        } ?: ProtectionMode.FILTER,
+        activeTunnelId = this[ACTIVE_TUNNEL],
         // An unrecognised stored value means a downgrade; fall back rather than crash on launch.
         blockMode = this[BLOCK_MODE]?.let { name ->
             BlockMode.entries.firstOrNull { it.name == name }
@@ -103,6 +131,8 @@ class SettingsStore(private val context: Context) {
 
     private companion object {
         val PROTECTION_REQUESTED = booleanPreferencesKey("protection_requested")
+        val PROTECTION_MODE = stringPreferencesKey("protection_mode")
+        val ACTIVE_TUNNEL = longPreferencesKey("active_tunnel")
         val BLOCK_MODE = stringPreferencesKey("block_mode")
         val UPSTREAM_RESOLVER = stringPreferencesKey("upstream_resolver")
         val CUSTOM_UPSTREAM = stringPreferencesKey("custom_upstream")

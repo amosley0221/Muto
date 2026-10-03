@@ -9,10 +9,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.muto.app.MutoApplication
 import dev.muto.app.data.BlocklistRepository
+import dev.muto.app.data.ProtectionMode
 import dev.muto.app.data.Settings
 import dev.muto.app.data.db.RuleAction
 import dev.muto.app.data.db.RuleEntity
 import dev.muto.app.data.db.SubscriptionEntity
+import dev.muto.app.data.db.TunnelEntity
+import dev.muto.app.tunnel.TunnelStatus
 import dev.muto.app.vpn.MutoVpnService
 import dev.muto.app.vpn.ProtectionState
 import dev.muto.app.vpn.VpnStatus
@@ -55,6 +58,11 @@ class MutoViewModel(application: Application) : AndroidViewModel(application) {
 
     val liveLog = app.queryLog.recent
 
+    val tunnels: StateFlow<List<TunnelEntity>> = app.tunnels.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val tunnelStatus: StateFlow<TunnelStatus> = app.tunnelController.state
+
     /**
      * Polled rather than pushed: the counters are plain atomics on the packet path, and making
      * them observable would put a flow emission in front of every DNS query.
@@ -74,12 +82,25 @@ class MutoViewModel(application: Application) : AndroidViewModel(application) {
     // ---- protection -------------------------------------------------------------------------
 
     /**
-     * The activity owns the consent dialog, so this only records intent; [onProtectionGranted]
-     * is called back once the user has agreed.
+     * The activity owns the consent dialog, so this is called back once the user has agreed.
+     *
+     * The handover between the two modes lives in [MutoApplication.startProtection], because the
+     * Quick Settings tile and the boot receiver need exactly the same logic.
      */
     fun onProtectionGranted() {
-        viewModelScope.launch { app.settingsStore.setProtectionRequested(true) }
+        viewModelScope.launch {
+            app.settingsStore.setProtectionRequested(true)
+            start()
+        }
     }
+
+    private suspend fun start() {
+        app.startProtection().onFailure {
+            _messages.emit(it.message ?: app.getString(dev.muto.app.R.string.tunnel_failed))
+            app.settingsStore.setProtectionRequested(false)
+        }
+    }
+
 
     fun onProtectionDenied() {
         viewModelScope.launch {
@@ -89,8 +110,54 @@ class MutoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopProtection() {
-        viewModelScope.launch { app.settingsStore.setProtectionRequested(false) }
-        MutoVpnService.stop(app)
+        viewModelScope.launch { app.stopProtection() }
+    }
+
+    /**
+     * Switches between filtering and tunnelling. If protection is already on, the running mode is
+     * torn down and the new one brought up, so the switch is the whole action rather than
+     * something the user has to follow with a manual restart.
+     */
+    fun setProtectionMode(mode: ProtectionMode) {
+        viewModelScope.launch {
+            val previous = app.settingsStore.currentSettings()
+            if (previous.protectionMode == mode) return@launch
+            app.settingsStore.setProtectionMode(mode)
+            if (previous.protectionRequested) start()
+        }
+    }
+
+    // ---- tunnels ----------------------------------------------------------------------------
+
+    fun importTunnel(name: String, configText: String) {
+        viewModelScope.launch {
+            app.tunnels.import(name, configText)
+                .onSuccess { imported ->
+                    app.settingsStore.setActiveTunnelId(imported.id)
+                    _messages.emit(app.getString(dev.muto.app.R.string.tunnel_imported, imported.name))
+                }
+                .onFailure { _messages.emit(it.message ?: "Could not import that config") }
+        }
+    }
+
+    fun selectTunnel(id: Long) {
+        viewModelScope.launch {
+            app.settingsStore.setActiveTunnelId(id)
+            // Switching the selected server while connected should move you to it, not silently
+            // leave you on the old one until the next reconnect.
+            if (app.tunnelController.state.value.isActive) start()
+        }
+    }
+
+    fun removeTunnel(id: Long) {
+        viewModelScope.launch {
+            val settings = app.settingsStore.currentSettings()
+            if (settings.activeTunnelId == id) {
+                if (app.tunnelController.state.value.isActive) app.tunnelController.disconnect()
+                app.settingsStore.setActiveTunnelId(null)
+            }
+            app.tunnels.remove(id)
+        }
     }
 
     fun togglePause() {

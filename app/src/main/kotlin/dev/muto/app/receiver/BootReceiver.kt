@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.VpnService
 import android.util.Log
 import dev.muto.app.MutoApplication
-import dev.muto.app.vpn.MutoVpnService
 import kotlinx.coroutines.launch
 
 /**
@@ -37,7 +36,10 @@ class BootReceiver : BroadcastReceiver() {
                     Log.i(TAG, "Not restarting: VPN consent is no longer granted")
                     return@launch
                 }
-                MutoVpnService.start(context)
+                app.startProtection().onFailure {
+                    Log.w(TAG, "Could not restore protection after boot: ${it.message}")
+                    app.settingsStore.setProtectionRequested(false)
+                }
             } finally {
                 pendingResult.finish()
             }

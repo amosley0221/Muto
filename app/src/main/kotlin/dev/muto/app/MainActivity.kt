@@ -15,7 +15,6 @@ import androidx.core.content.ContextCompat
 import dev.muto.app.ui.MutoApp
 import dev.muto.app.ui.MutoViewModel
 import dev.muto.app.ui.theme.MutoTheme
-import dev.muto.app.vpn.MutoVpnService
 
 class MainActivity : ComponentActivity() {
 
@@ -28,7 +27,6 @@ class MainActivity : ComponentActivity() {
     private val vpnConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             viewModel.onProtectionGranted()
-            MutoVpnService.start(this)
         } else {
             viewModel.onProtectionDenied()
         }
@@ -68,7 +66,6 @@ class MainActivity : ComponentActivity() {
             vpnConsent.launch(consent)
         } else {
             viewModel.onProtectionGranted()
-            MutoVpnService.start(this)
         }
     }
 }

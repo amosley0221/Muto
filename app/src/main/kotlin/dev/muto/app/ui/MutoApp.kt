@@ -34,6 +34,7 @@ import dev.muto.app.ui.screens.ListsScreen
 import dev.muto.app.ui.screens.LogScreen
 import dev.muto.app.ui.screens.RulesScreen
 import dev.muto.app.ui.screens.SettingsScreen
+import dev.muto.app.ui.screens.TunnelScreen
 
 private enum class Destination(val route: String, val label: Int, val icon: ImageVector) {
     HOME("home", R.string.nav_home, Icons.Filled.Shield),
@@ -44,6 +45,7 @@ private enum class Destination(val route: String, val label: Int, val icon: Imag
 }
 
 private const val ROUTE_APPS = "settings/apps"
+private const val ROUTE_TUNNELS = "tunnels"
 
 @Composable
 fun MutoApp(
@@ -92,6 +94,7 @@ fun MutoApp(
                     viewModel = viewModel,
                     onRequestProtection = onRequestProtection,
                     onOpenLog = { navController.navigate(Destination.LOG.route) },
+                    onManageTunnels = { navController.navigate(ROUTE_TUNNELS) },
                 )
             }
             composable(Destination.LISTS.route) { ListsScreen(viewModel) }
@@ -101,10 +104,14 @@ fun MutoApp(
                 SettingsScreen(
                     viewModel = viewModel,
                     onOpenApps = { navController.navigate(ROUTE_APPS) },
+                    onOpenTunnels = { navController.navigate(ROUTE_TUNNELS) },
                 )
             }
             composable(ROUTE_APPS) {
                 AppsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_TUNNELS) {
+                TunnelScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
             }
         }
     }

@@ -24,6 +24,8 @@ First release.
 - Per-app bypass, for apps that refuse to run alongside a VPN.
 - Pause without tearing the tunnel down, a Quick Settings tile, start after reboot, and scheduled
   list updates that can be held to Wi-Fi.
+- **VPN tunnel mode.** Import a WireGuard config from a provider or your own server and route the
+  whole device through it. Muto runs no servers of its own and ships no provider.
 
 ### What it does not do
 
@@ -32,3 +34,8 @@ First release.
   on those two.
 - Chrome is only partly covered: ads on their own domains go, ads served by the site itself stay,
   and blocked slots leave a gap because nothing can run inside the page.
+- **Blocking and tunnelling cannot run at the same time.** Android allows one VPN at a time, so
+  Muto does one or the other. While tunnelled, blocking comes from the resolver your WireGuard
+  config points at.
+- **A tunnel does not change what your phone's GPS reports**, which is what strict services such
+  as YouTube TV check. See `docs/VPN.md` before assuming a US exit is enough.

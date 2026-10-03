@@ -3,10 +3,14 @@ package dev.muto.app
 import android.app.Application
 import dev.muto.app.data.BlocklistRepository
 import dev.muto.app.data.FilterCoordinator
+import dev.muto.app.data.ProtectionMode
 import dev.muto.app.data.QueryLogRepository
 import dev.muto.app.data.RuleRepository
+import dev.muto.app.data.TunnelRepository
 import dev.muto.app.data.SettingsStore
 import dev.muto.app.data.db.MutoDatabase
+import dev.muto.app.tunnel.TunnelController
+import dev.muto.app.vpn.MutoVpnService
 import dev.muto.app.work.BlocklistUpdateWorker
 import dev.muto.core.stats.FilterStats
 import kotlinx.coroutines.CoroutineScope
@@ -28,11 +32,46 @@ class MutoApplication : Application() {
     val settingsStore by lazy { SettingsStore(this) }
     val blocklists by lazy { BlocklistRepository(this, database.subscriptions()) }
     val rules by lazy { RuleRepository(database.rules()) }
+    val tunnels by lazy { TunnelRepository(database.tunnels()) }
+    val tunnelController by lazy { TunnelController(this) }
     val queryLog by lazy { QueryLogRepository(scope, database.queryLog()) }
     val stats = FilterStats()
 
     val filterCoordinator by lazy {
         FilterCoordinator(scope, blocklists, database.rules(), settingsStore)
+    }
+
+    /**
+     * Turns protection on in whichever mode is selected.
+     *
+     * Lives here rather than in the view model because the Quick Settings tile and the boot
+     * receiver need it too, and three copies of "stop the other one first" is three chances to
+     * get the handover wrong. Assumes VPN consent has already been granted - only an activity
+     * can ask for that.
+     */
+    suspend fun startProtection(): Result<Unit> {
+        val settings = settingsStore.currentSettings()
+        return when (settings.protectionMode) {
+            ProtectionMode.FILTER -> {
+                if (tunnelController.isRunning()) tunnelController.disconnect()
+                MutoVpnService.start(this)
+                Result.success(Unit)
+            }
+            ProtectionMode.TUNNEL -> {
+                MutoVpnService.stop(this)
+                val tunnel = settings.activeTunnelId?.let { tunnels.byId(it) } ?: tunnels.mostRecent()
+                    ?: return Result.failure(IllegalStateException(getString(R.string.tunnel_none_configured)))
+                tunnelController.connect(tunnel.name, tunnel.config)
+                    .onSuccess { tunnels.markConnected(tunnel.id) }
+            }
+        }
+    }
+
+    /** Turns everything off, whichever mode was running. */
+    suspend fun stopProtection() {
+        settingsStore.setProtectionRequested(false)
+        tunnelController.disconnect()
+        MutoVpnService.stop(this)
     }
 
     override fun onCreate() {

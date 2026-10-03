@@ -92,3 +92,28 @@ interface QueryLogDao {
 
 /** A host with how often it was blocked, for the "most blocked" list on the home screen. */
 data class HostCount(val host: String, val hits: Int)
+
+@Dao
+interface TunnelDao {
+
+    @Query("SELECT * FROM tunnels ORDER BY lastConnectedAt DESC, name ASC")
+    fun observeAll(): Flow<List<TunnelEntity>>
+
+    @Query("SELECT * FROM tunnels WHERE id = :id")
+    suspend fun byId(id: Long): TunnelEntity?
+
+    @Query("SELECT * FROM tunnels ORDER BY lastConnectedAt DESC, name ASC LIMIT 1")
+    suspend fun mostRecent(): TunnelEntity?
+
+    @Query("SELECT COUNT(*) FROM tunnels WHERE name = :name")
+    suspend fun countWithName(name: String): Int
+
+    @Insert
+    suspend fun insert(tunnel: TunnelEntity): Long
+
+    @Query("UPDATE tunnels SET lastConnectedAt = :at WHERE id = :id")
+    suspend fun markConnected(id: Long, at: Long)
+
+    @Query("DELETE FROM tunnels WHERE id = :id")
+    suspend fun delete(id: Long)
+}

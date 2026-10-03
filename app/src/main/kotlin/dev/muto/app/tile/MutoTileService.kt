@@ -14,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import dev.muto.app.tunnel.TunnelConnection
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -32,8 +34,19 @@ class MutoTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main).also { this.scope = it }
-        watcher = MutoVpnService.status
-            .onEach { render(it.state) }
+        val app = application as MutoApplication
+        // Either mode can be the one that is running, so the tile follows both.
+        watcher = combine(
+            MutoVpnService.status,
+            app.tunnelController.state,
+        ) { filter, tunnel ->
+            when {
+                tunnel.connection == TunnelConnection.CONNECTED -> ProtectionState.RUNNING
+                tunnel.connection == TunnelConnection.CONNECTING -> ProtectionState.STARTING
+                else -> filter.state
+            }
+        }
+            .onEach { render(it) }
             .launchIn(scope)
     }
 
@@ -46,11 +59,9 @@ class MutoTileService : TileService() {
 
     override fun onClick() {
         val app = application as MutoApplication
-        val active = MutoVpnService.status.value.isActive
 
-        if (active) {
-            app.scope.launch { app.settingsStore.setProtectionRequested(false) }
-            MutoVpnService.stop(this)
+        if (isOn()) {
+            app.scope.launch { app.stopProtection() }
             return
         }
 
@@ -60,9 +71,20 @@ class MutoTileService : TileService() {
             return
         }
 
-        app.scope.launch { app.settingsStore.setProtectionRequested(true) }
-        MutoVpnService.start(this)
+        app.scope.launch {
+            app.settingsStore.setProtectionRequested(true)
+            app.startProtection().onFailure {
+                // A tile cannot show an error, so leave the flag off and let the tile fall back
+                // to inactive rather than claim protection it does not have.
+                app.settingsStore.setProtectionRequested(false)
+            }
+        }
     }
+
+    /** True when either mode is up; the tile toggles whichever one is selected. */
+    private fun isOn(): Boolean =
+        MutoVpnService.status.value.isActive ||
+            (application as MutoApplication).tunnelController.state.value.isActive
 
     private fun render(state: ProtectionState) {
         val tile = qsTile ?: return
