@@ -24,3 +24,11 @@
 
 # Room, Compose, OkHttp and WorkManager all ship their own consumer rules, so nothing more is
 # needed for them.
+
+# wireguard-android ships no consumer rules of its own, so these have to be stated here.
+# libwg-go.so resolves its JNI entry points by symbol name, which encodes the Java class and
+# method names, and GoBackend$VpnService is instantiated by the system from the merged manifest.
+# Renaming any of that leaves the tunnel failing at runtime with an UnsatisfiedLinkError that
+# only shows up in a minified build - which is to say, only in release.
+-keep class com.wireguard.** { *; }
+-keepclasseswithmembernames class * { native <methods>; }

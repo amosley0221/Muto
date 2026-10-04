@@ -58,6 +58,13 @@ jobs:
       - name: Build the debug APK
         run: ./gradlew :app:assembleDebug
 
+      # The release variant is the one that ships, and it is the only one that runs R8. Build it
+      # unsigned on every push so a minification problem surfaces here rather than at the moment
+      # someone is trying to cut a release. Unsigned is fine: this APK is never published, it
+      # exists to prove the release path compiles, shrinks and packages.
+      - name: Build the release APK unsigned
+        run: ./gradlew :app:assembleRelease
+
       - name: Lint
         run: ./gradlew :app:lintDebug
         continue-on-error: true
