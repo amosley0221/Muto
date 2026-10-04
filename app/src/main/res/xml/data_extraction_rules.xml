@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
+    <!-- See backup_rules.xml: what is listed is what travels, everything else stays behind. -->
     <cloud-backup>
         <include domain="database" path="muto.db" />
         <include domain="sharedpref" path="." />
-        <exclude domain="file" path="lists" />
     </cloud-backup>
     <device-transfer>
+        <!--
+          A direct phone-to-phone transfer never leaves the two devices, so the tunnel keys can
+          come along; it saves re-importing every config on a new phone.
+        -->
         <include domain="database" path="muto.db" />
+        <include domain="database" path="muto-tunnels.db" />
         <include domain="sharedpref" path="." />
-        <exclude domain="file" path="lists" />
     </device-transfer>
 </data-extraction-rules>

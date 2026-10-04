@@ -9,6 +9,7 @@ import dev.muto.app.data.RuleRepository
 import dev.muto.app.data.TunnelRepository
 import dev.muto.app.data.SettingsStore
 import dev.muto.app.data.db.MutoDatabase
+import dev.muto.app.data.db.TunnelDatabase
 import dev.muto.app.tunnel.TunnelController
 import dev.muto.app.vpn.MutoVpnService
 import dev.muto.app.work.BlocklistUpdateWorker
@@ -29,10 +30,12 @@ class MutoApplication : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val database by lazy { MutoDatabase.create(this) }
+    // Separate file so cloud backup can take the rules and leave the keys.
+    val tunnelDatabase by lazy { TunnelDatabase.create(this) }
     val settingsStore by lazy { SettingsStore(this) }
     val blocklists by lazy { BlocklistRepository(this, database.subscriptions()) }
     val rules by lazy { RuleRepository(database.rules()) }
-    val tunnels by lazy { TunnelRepository(database.tunnels()) }
+    val tunnels by lazy { TunnelRepository(tunnelDatabase.tunnels()) }
     val tunnelController by lazy { TunnelController(this) }
     val queryLog by lazy { QueryLogRepository(scope, database.queryLog()) }
     val stats = FilterStats()
