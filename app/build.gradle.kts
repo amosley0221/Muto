@@ -48,6 +48,22 @@ android {
     }
 
     signingConfigs {
+        // A fixed debug key, committed to the repository on purpose.
+        //
+        // Without this, AGP generates a throwaway debug keystore per machine - which on a fresh
+        // CI runner means every build is signed differently, so one CI debug APK cannot install
+        // over the previous one. Pinning it makes debug builds upgradeable among themselves.
+        //
+        // It is not a secret and does not need to be: these are the values every Android debug
+        // keystore uses, the variant carries the .debug application id, and it can never be
+        // mistaken for or update a release build.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+
         if (hasReleaseKey) {
             create("release") {
                 storeFile = file(keystoreFile!!)

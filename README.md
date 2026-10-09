@@ -78,7 +78,12 @@ not used to route traffic anywhere.
 ## Installing
 
 Grab the latest `muto-<version>.apk` from the [releases page](../../releases) and open it on the
-phone. Android will ask you to allow installing from this source the first time.
+phone.
+
+If there is no versioned release yet, the `Latest debug build` prerelease on that page always
+carries a `muto-debug-latest.apk` built from the current commit. It installs and runs, but it is
+a separate app (`dev.muto.app.debug`) that a real release will not update — see
+[docs/RELEASING.md](docs/RELEASING.md). Android will ask you to allow installing from this source the first time.
 
 **Updating:** install the newer APK straight over the old one. Rules, lists, history and settings
 are all kept, and there is no need to uninstall — every release is signed with the same key, which

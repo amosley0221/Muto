@@ -33,6 +33,19 @@ anyone, ever. There is no recovery path.
 
 `*.jks` is in `.gitignore`. Do not commit the key.
 
+## Before the key exists: the debug prerelease
+
+Every push to the default branch replaces the `muto-debug-latest.apk` asset on the
+`Latest debug build` prerelease. That is a working, installable app and needs no secrets, so it is
+the way in before signing is configured.
+
+It is not a substitute for a release:
+
+- different application id (`dev.muto.app.debug`), so it is a separate app that a release will
+  never update, and uninstalling it is the only way to switch
+- not minified, so it never exercises R8 — the code path a release actually ships
+- signed with `app/debug.keystore`, which is committed and public on purpose
+
 ## Cutting a release
 
 Bump the version file and push:

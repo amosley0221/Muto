@@ -13,6 +13,10 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+# Needed to keep the rolling debug prerelease up to date.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -76,6 +80,50 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      # An Actions artifact is a zip behind a login, which is a poor way to hand someone an APK
+      # to install on a phone. The same file as a prerelease asset is a direct, tappable link.
+      # This is the debug build, not a release: see the notes it publishes.
+      - name: Publish the debug APK as a rolling prerelease
+        if: github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SRC=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          cp "$SRC" muto-debug-latest.apk
+
+          cat > prerelease-notes.md <<'NOTES'
+          Automatic build of the latest commit on the default branch. **This is a debug build**,
+          published here because an Actions artifact is a zip behind a login and this is a link
+          you can tap on a phone.
+
+          Download `muto-debug-latest.apk` below and open it on the device.
+
+          ### What to know before installing
+
+          - It installs as a **separate app** from a proper release: the application id is
+            `dev.muto.app.debug`. A real release will not update it, and it will not update a
+            release. You can have both installed at once.
+          - It is **not minified**, so it is larger and slower than a release build, and it does
+            not exercise the release code path.
+          - Each new push replaces this file. One debug build does update another, because they
+            are all signed with the same committed debug key.
+
+          When the signing secrets are configured, proper versioned releases appear on this page
+          alongside this one — install one of those instead and uninstall this.
+          NOTES
+
+          if gh release view ci-debug >/dev/null 2>&1; then
+            gh release upload ci-debug muto-debug-latest.apk --clobber
+            gh release edit ci-debug --notes-file prerelease-notes.md
+          else
+            gh release create ci-debug muto-debug-latest.apk \
+              --prerelease \
+              --title "Latest debug build" \
+              --notes-file prerelease-notes.md
+          fi
+          echo "Debug APK published: $(gh release view ci-debug --json url --jq .url)"
 
       - name: Upload test and lint reports
         if: always()
